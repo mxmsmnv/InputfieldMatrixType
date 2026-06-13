@@ -14,8 +14,32 @@ class MatrixDataProcessor {
         'price', 'sku' // Skip price and sku as they're handled separately
     ];
     
-    public function __construct($page) {
+    public function __construct($page, array $options = []) {
         $this->page = $page;
+
+        if(isset($options['skipFields']) && is_array($options['skipFields'])) {
+            $this->setSkipFields($options['skipFields']);
+        }
+
+        if(isset($options['addSkipFields']) && is_array($options['addSkipFields'])) {
+            $this->addSkipFields($options['addSkipFields']);
+        }
+    }
+
+    /**
+     * Replace the full skip field list
+     */
+    public function setSkipFields(array $fieldNames) {
+        $this->skipFields = array_values(array_unique($fieldNames));
+        return $this;
+    }
+
+    /**
+     * Add field names to the skip list
+     */
+    public function addSkipFields(array $fieldNames) {
+        $this->skipFields = array_values(array_unique(array_merge($this->skipFields, $fieldNames)));
+        return $this;
     }
     
     /**
@@ -41,13 +65,14 @@ class MatrixDataProcessor {
      */
     protected function processItem($item) {
         $matrixInfo = $this->getMatrixTypeInfo($item);
+        $priceFieldType = $this->getFieldTypeName($item, 'price');
         
         return [
             'id' => $item->id,
             'type' => $matrixInfo['type'],
             'displayName' => $matrixInfo['displayName'],
-            'sku' => $item->sku ?: '',
-            'price' => $item->price ?: null,
+            'sku' => $this->isEmpty($item->sku) ? '' : (string)$item->sku,
+            'price' => $this->isEmpty($item->price, $priceFieldType) ? null : (float)$item->price,
             'fields' => $this->getFields($item)
         ];
     }
@@ -171,6 +196,22 @@ class MatrixDataProcessor {
         $name = str_replace('repeater_', '', $name);
         return wire('sanitizer')->name($name);
     }
+
+    /**
+     * Get fieldtype class name from an item's template
+     */
+    protected function getFieldTypeName($item, $fieldName) {
+        if(!$item->template || !$item->template->fields) {
+            return null;
+        }
+
+        $field = $item->template->fields->get($fieldName);
+        if(!$field || !$field->type) {
+            return null;
+        }
+
+        return $field->type->className();
+    }
     
     /**
      * Get all fields with values
@@ -194,7 +235,7 @@ class MatrixDataProcessor {
             $value = $item->$fieldName;
             
             // Skip empty values
-            if($this->isEmpty($value)) {
+            if($this->isEmpty($value, $field->type->className())) {
                 continue;
             }
             
@@ -234,8 +275,17 @@ class MatrixDataProcessor {
             
             case 'FieldtypeImage':
                 return $this->formatImages($value);
+
+            case 'FieldtypeFile':
+                return $this->formatFiles($value);
             
             default:
+                if(is_object($value)) {
+                    if(method_exists($value, '__toString')) return (string)$value;
+                    if(isset($value->title)) return (string)$value->title;
+                    return null;
+                }
+                if(is_array($value)) return $value;
                 return (string)$value;
         }
     }
@@ -296,25 +346,46 @@ class MatrixDataProcessor {
         $imageList = $value instanceof Pageimages ? $value : [$value];
         
         foreach($imageList as $img) {
+            if(!is_object($img) || !isset($img->url)) continue;
             $images[] = [
                 'url' => $img->url,
-                'description' => $img->description,
-                'width' => $img->width,
-                'height' => $img->height
+                'description' => isset($img->description) ? $img->description : '',
+                'width' => isset($img->width) ? $img->width : null,
+                'height' => isset($img->height) ? $img->height : null
             ];
         }
         
         return $images;
+    }
+
+    /**
+     * Format Files
+     */
+    protected function formatFiles($value) {
+        $files = [];
+        $fileList = $value instanceof Pagefiles ? $value : [$value];
+
+        foreach($fileList as $file) {
+            if(!is_object($file) || !isset($file->url)) continue;
+            $files[] = [
+                'url' => $file->url,
+                'description' => isset($file->description) ? $file->description : '',
+                'filesize' => isset($file->filesize) ? $file->filesize : null,
+                'basename' => isset($file->basename) ? $file->basename : ''
+            ];
+        }
+
+        return $files;
     }
     
     /**
      * Check if value is empty
      * For checkboxes: 0 or false = empty, 1 or true = filled
      */
-    protected function isEmpty($value) {
+    protected function isEmpty($value, $fieldType = null) {
         if(is_null($value)) return true;
         if(is_bool($value)) return !$value;  // false = empty, true = filled
-        if(is_int($value) && $value === 0) return true;  // 0 = empty for checkboxes
+        if($fieldType === 'FieldtypeCheckbox' && (int)$value === 0) return true;
         if(is_string($value) && trim($value) === '') return true;
         if(is_object($value) && $value instanceof WireArray && !$value->count()) return true;
         if(is_array($value) && empty($value)) return true;

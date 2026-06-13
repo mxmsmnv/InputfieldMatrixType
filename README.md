@@ -3,7 +3,7 @@
 A ProcessWire module for managing and displaying typed repeater matrix items with structured data extraction and flexible rendering.
 
 **Author:** Maxim Semenov — maxim@smnv.org — smnv.org  
-**Version:** 1.0.9  
+**Version:** 1.1.0
 **Repository:** github.com/mxmsmnv/InputfieldMatrixType  
 **License:** MIT
 
@@ -32,6 +32,7 @@ This module solves these problems by providing a dedicated fieldtype for storing
 - Built-in price and SKU field support
 - Support for multiple field types (text, images, options, pages, etc.)
 - Skip empty values automatically
+- Preserve numeric zero values for number fields
 - Filter system fields automatically
 - Reliable type detection via native `repeater_matrix_type` + `getMatrixTypes()`
 
@@ -145,8 +146,9 @@ $items = $processor->getItems('your_matrix_field_name');
 | FieldtypeCheckbox | bool |
 | FieldtypePage | array with `id`, `title`, `url` — or array of such arrays |
 | FieldtypeImage | array with `url`, `description`, `width`, `height` |
+| FieldtypeFile | array with `url`, `description`, `filesize`, `basename` |
 
-Empty values are skipped automatically — a field only appears in `$item['fields']` if it has a non-empty value.
+Empty values are skipped automatically — a field only appears in `$item['fields']` if it has a non-empty value. Numeric `0` is preserved for number fields; unchecked checkboxes are skipped.
 
 ## Examples
 
@@ -240,7 +242,7 @@ foreach ($items as $item):
 <div class="card" data-type="<?= $item['type'] ?>">
     <h3><?= $item['displayName'] ?></h3>
 
-    <?php if ($item['price']): ?>
+    <?php if ($item['price'] !== null): ?>
     <div class="price">$<?= number_format($item['price'], 2) ?></div>
     <?php endif ?>
 
@@ -273,7 +275,18 @@ The processor automatically skips:
 - `price`, `sku` (returned separately at the item level)
 - All `FieldtypeMatrixType` fields (used for type detection only)
 
-To customize, modify the `$skipFields` array in `MatrixDataProcessor.php`.
+You can customize skipped fields without editing the class:
+
+```php
+$processor = new MatrixDataProcessor($page, [
+    'addSkipFields' => ['internal_notes', 'supplier_cost']
+]);
+
+// Or replace the full skip list:
+$processor = new MatrixDataProcessor($page, [
+    'skipFields' => ['repeater_matrix_type', 'id', 'name']
+]);
+```
 
 ## Custom Formatting
 
@@ -296,7 +309,7 @@ protected function formatValue($value, $field) {
 
 ```php
 // Constructor
-$processor = new MatrixDataProcessor(Page $page);
+$processor = new MatrixDataProcessor(Page $page, array $options = []);
 
 // Get all items from a matrix field
 $items = $processor->getItems(string $matrixFieldName = 'matrix');
@@ -327,4 +340,4 @@ MIT — free to use and modify
 ---
 
 **Author:** Maxim Semenov — maxim@smnv.org  
-**Module Version:** 1.0.9
+**Module Version:** 1.1.0

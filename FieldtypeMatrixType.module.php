@@ -5,8 +5,9 @@ class FieldtypeMatrixType extends FieldtypeText {
     public static function getModuleInfo() {
         return array(
             'title' => 'Matrix Type Fieldtype',
-            'version' => 109,
-            'summary' => 'Stores matrix item type identifier'
+            'version' => 110,
+            'summary' => 'Stores matrix item type identifier',
+            'requires' => array('ProcessWire>=3.0.0', 'InputfieldMatrixType')
         );
     }
 

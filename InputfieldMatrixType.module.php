@@ -5,7 +5,7 @@ class InputfieldMatrixType extends Inputfield {
     public static function getModuleInfo() {
         return array(
             'title' => 'Matrix Type',
-            'version' => 109,
+            'version' => 110,
             'summary' => 'Hidden field for identifying repeater matrix item types',
             'requires' => 'ProcessWire>=3.0.0',
             'icon' => 'tag'
@@ -26,11 +26,14 @@ class InputfieldMatrixType extends Inputfield {
         }
         
         $displayName = $this->matrixDisplayName ?: $value;
+        $nameEsc = htmlspecialchars((string)$this->attr('name'), ENT_QUOTES, 'UTF-8');
+        $valueEsc = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+        $displayNameEsc = htmlspecialchars((string)$displayName, ENT_QUOTES, 'UTF-8');
         
         
-        return "<input type='hidden' name='{$this->attr('name')}' value='{$value}' />" .
+        return "<input type='hidden' name='{$nameEsc}' value='{$valueEsc}' />" .
                "<div style=''>" .
-               "{$displayName} <code>{$value}</code>" .
+               "{$displayNameEsc} <code>{$valueEsc}</code>" .
                "</div>";
                
     }
