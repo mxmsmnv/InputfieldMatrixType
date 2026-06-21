@@ -5,6 +5,8 @@ A ProcessWire module for managing and displaying typed repeater matrix items wit
 **Version:** 1.1.0
 **Repository:** github.com/mxmsmnv/InputfieldMatrixType  
 
+![InputfieldMatrixType](assets/InputfieldMatrixType.png)
+
 **Author:** Maxim Semenov  
 **Website:** [smnv.org](https://smnv.org)  
 **Email:** [maxim@smnv.org](mailto:maxim@smnv.org)
